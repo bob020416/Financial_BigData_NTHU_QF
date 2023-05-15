@@ -1,0 +1,63 @@
+---
+title: "Homework 1"
+author: "109090035_陳佑祥"
+date: "2/20/2023"
+output: html_document
+---
+## 第一題
+
+The variable 'Temp' of the dataset 'airquality' contains temperature in degrees Fahrenheit. Please add another variable (column) to 'airquality' by the name 'TempC' that contains degrees Celsius converted from 'Temp'. Use the 'str()' function to check the resulting 'airquality' and copy the result to your answer sheet.
+
+```{r}
+library(weathermetrics)
+airquality$TempC <- fahrenheit.to.celsius(airquality$Temp)
+str(airquality)
+```
+
+## 第二題
+Install a new package 'skimr' (use help to find out what functions it contains). Apply the 'skim' function from this package to the 'airquality' dataset and then apply the base function 'summary()' to the 'airquality' dataset. Copy all the results to your answer sheet and explain the difference between the outputs of these two functions.
+```{r}
+#install.packages("skimr")
+library(skimr)
+help(skimr)
+#apply skim function 
+skim(airquality)
+#apply summary function 
+summary(airquality)
+```
+It seems that skim function will output the result as dataframe which include missing NAs, and the data complete rate, the mean,sd,min value,max value and the first, second, third quantile of each row, and it also plot out the histogram of each column value in airquality.
+
+And the summary function in base r print out the Minimum value, first quantile, Median, Mean, third quantile ,missing value(NAs)  and the Max value in each column of airquality. 
+
+## 第三題
+Please use the 'apply()' function together with the 'mean()', 'median()', 'sd()' and 'quantile()' functions, respectively, to each variable of the 'airquality' dataset. Please include the 'na.rm' option with both 'F' and 'T' values to see how this option affects the results. Write down the commands and copy all the results to your answer sheet.
+
+#### Mean
+```{r}
+print("apply the mean function to each column in airquality")
+apply(airquality, 2, mean ,na.rm = T)
+print("apply the mean function to each column in airquality with NA")
+apply(airquality, 2, mean ,na.rm = F)
+```
+#### Median
+```{r}
+print("apply the median function to each colunn in airquality")
+apply(airquality, 2, median,na.rm = T)
+print("apply the median function to each column in airquality with NA")
+apply(airquality, 2, median,na.rm = F)
+```
+#### Standard Deviation
+```{r}
+print("apply the sd function to each column in airquality")
+apply(airquality, 2, sd,na.rm = T)
+print("apply the sd function to each column in airquality with NA")
+apply(airquality, 2, sd,na.rm = F)
+```
+#### Quantile
+```{r}
+print("apply the quantile function to each column in airquality")
+apply(airquality, 2, quantile,na.rm = T)
+#apply(airquality, 2, quantile,na.rm = F)
+#quantile function can not work with NA exist 
+```
+

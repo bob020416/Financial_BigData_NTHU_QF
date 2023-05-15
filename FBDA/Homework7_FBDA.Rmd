@@ -1,0 +1,350 @@
+---
+title: "Homework7_FBDA"
+author: "109090035"
+date: "4/25/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      comment = "", 
+                      dev.args = list(                                       pointsize = 11))
+library(FSA)
+library(car)
+library(skimr)
+library(psych)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(Ecdat)
+library(gapminder)
+library(nycflights13)
+library(scales)
+
+ptable = function(df,digits = getOption("digits"),size = 14){
+  df %>% knitr::kable(digits = digits) %>% 
+    kable_classic(lightable_options = c("striped", "hover", "condensed"),
+                  fixed_thead = list(enabled = T, 
+                                     background = "lavender"),
+                  font_size = size, full_width = F,
+                  html_font = "helvetica")
+}
+```
+
+### Please first install the ‘scales’ package and load it. We are going to use the ‘gapminder’ dataset from the ‘gapminder’ package, in particular, the subsample for Asian and African countries over the two years of 1957 and 2007.
+
+### Please examine the following codes for subsample scatter plots and corresponding linear regression lines for the two variables ‘lifeExp’ and ‘gdpPercap’ (which is taken log transformation). The sample points for Asian and African countries have different colors.The 3 regression lines are for the Asian and African countries as well as for the combined sample (the red line). Please examine how the two ‘geom_smooth()’ functions work to produce the 3 regression lines, especially the one with the option ‘col = “All”’ for the combined sample, Finally, the ‘scale_color_manual()’ function is included in a very special manner in order to define the content of the legend. Also, the ‘theme()’ function is specified with 5 options. Please try to understand how these functions work.
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa","Asia") & year %in% c(1957,2007)) %>% 
+  ggplot(aes(y = lifeExp,x = log(gdpPercap))) +
+  geom_point(aes(col = continent), size = 2) +
+  geom_smooth(aes(col = continent), method = lm, se = F) +
+  geom_smooth(aes(col = "All"), method = lm, se = F) +
+  scale_color_manual(values = c("Africa" = 'limegreen', 
+                                "Asia" = 'gold', 
+                                "All" = 'tomato')) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black",0.85)),
+        panel.grid = element_line(color = alpha("white",0.3),size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black",0.85)))
+```
+
+This code creates a scatter plot of life expectancy (lifeExp) against the logarithm of GDP per capita (log(gdpPercap)) using the gapminder dataset, filtered for African and Asian countries in the years 1957 and 2007. Three linear regression lines are displayed: one for African countries, one for Asian countries, and one for the combined sample. The points and lines are colored differently for better visualization, and the plot has a customized appearance using the theme() function. 
+
+1. The gapminder dataset is filtered to keep only African and Asian countries for the years 1957 and 2007.
+2. ggplot() initializes the plot with the specified aesthetic mappings, where x-axis is the logarithm of GDP per capita and the y-axis is life expectancy.
+3. geom_point() adds scatter plot points with different colors for African and Asian countries based on the continent variable.
+4. geom_smooth() is used twice to add three linear regression lines to the plot:
+  The first call adds a linear regression line for each         continent (Africa and Asia) without displaying the standard   error bands (se = F).
+  The second call adds a linear regression line for the         combined sample of African and Asian countries, using the     color label "All".
+5. scale_color_manual() is used to assign specific colors to the points and lines based on their continent or "All" label. Africa is assigned 'limegreen', Asia is assigned 'gold', and the combined sample is assigned 'tomato'.
+6. theme_minimal() is applied to create a minimalistic plot theme.
+7. Additional theme() customization is applied to modify various aspects of the plot's appearance:
+  panel.background is set to a semi-transparent black color.
+  panel.grid is set to semi-transparent white lines with a      specified size.
+  legend.title and legend.text are set to white color.
+  legend.box.background is set to a semi-transparent black      color.
+  
+By running this code,  will generate a scatter plot with the specified aesthetics, colors, and customized theme. The plot shows the relationship between life expectancy and the logarithm of GDP per capita for African and Asian countries in 1957 and 2007, with separate regression lines for each continent and the combined sample.
+
+### The previous codes can be extended to distriguish the four subsamples (instead of two) of Asian and African countries across two years of 1957 and 2007. The key step is the creation of the new variable ‘conyear’ that pastes the original variables ‘continent’ and ‘year’.Please think how such a joined variable actually works, Also note that the 5 regreesion lines are still created by the two ‘geom_smooth()’ functions whilethe specification of the ‘scale_color_manual()’ function needs to expanded.
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa","Asia") & year %in% c(1957,2007)) %>% 
+  mutate(conyear = paste(continent,year,sep="-")) %>% 
+  ggplot(aes(y = lifeExp,x = log(gdpPercap))) +
+  geom_point(aes(col = conyear), size = 2) +
+  geom_smooth(aes(col = conyear), size = 0.8, method = lm, se = F) +
+  geom_smooth(aes(col = "All"), size = 0.8, method = lm, se = F) +
+  scale_color_manual(values = c("Africa-1957" = alpha('limegreen',0.6), 
+                                "Africa-2007" = 'greenyellow', 
+                                "Asia-1957" = alpha('gold',0.4), 
+                                "Asia-2007" = 'yellow', 
+                                "All" = 'tomato'),
+                     guide_legend("Continent-Year")) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black",0.85)),
+        panel.grid = element_line(color = alpha("white",0.3),size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black",0.85)))
+```
+
+The gapminder dataset is extended to distinguish the four subsamples of Asian and African countries across the two years of 1957 and 2007. The key change is the creation of a new variable 'conyear' that combines the 'continent' and 'year' variables. Let's discuss the changes in the code and how they work:
+
+1. mutate(conyear = paste(continent, year, sep="-")) creates a new variable 'conyear' that combines the 'continent' and 'year' variables using a hyphen as a separator. This results in four unique values: "Africa-1957", "Africa-2007", "Asia-1957", and "Asia-2007".
+
+2. geom_point(aes(col = conyear), size = 2) adds scatter plot points with different colors for each of the four subsamples based on the 'conyear' variable.
+
+3. geom_smooth(aes(col = conyear), size = 0.8, method = lm, se = F) adds a linear regression line for each of the four subsamples without displaying the standard error bands (se = F).
+
+4. The second call to geom_smooth() remains unchanged and adds a linear regression line for the combined sample of all African and Asian countries, using the color label "All".
+
+5. scale_color_manual() is expanded to assign specific colors to the points and lines based on their 'conyear' or "All" label:
+Africa-1957: semi-transparent limegreen
+Africa-2007: greenyellow
+Asia-1957: semi-transparent gold
+Asia-2007: yellow
+All: tomato
+The guide_legend() function is also included to display the legend title as "Continent-Year".
+
+The rest of the code remains unchanged, keeping the same theme customizations as before. By running this updated code, we will generate a scatter plot showing the relationship between life expectancy and the logarithm of GDP per capita for the four subsamples of African and Asian countries in 1957 and 2007, with separate regression lines for each subsample and the combined sample. The plot will have specific colors and customized theme settings.
+
+### Question 1
+
+### Please rewrite the first set of codes to create similar plots for the subsamples of year 1957 and 2007 (instead of the subsamples of two groups of countries 1957 and 2007).
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa", "Asia") & year %in% c(1957, 2007)) %>% 
+  mutate(year_continent = paste(year, continent, sep = "-")) %>% 
+  ggplot(aes(y = lifeExp, x = log(gdpPercap))) +
+  geom_point(aes(col = year_continent), size = 2) +
+  geom_smooth(aes(col = year_continent), method = lm, se = F) +
+  geom_smooth(aes(col = "All"), method = lm, se = F) +
+  scale_color_manual(values = c("1957-Africa" = 'limegreen', 
+                                "1957-Asia" = 'gold', 
+                                "2007-Africa" = 'greenyellow', 
+                                "2007-Asia" = 'yellow', 
+                                "All" = 'tomato')) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black", 0.85)),
+        panel.grid = element_line(color = alpha("white", 0.3), size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black", 0.85)))
+
+```
+
+### Question 2
+
+### The red regreesion line for the combined sample can be estimated with the following codes:
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa","Asia") & year %in% c(1957,2007)) %>% 
+  lm(lifeExp ~ log(gdpPercap),.) %>% summary()
+
+```
+
+### while the other two subsample regression lines separately for Asian and African countries can be estimated with the following codes:
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa","Asia") & year %in% c(1957,2007)) %>% 
+  lm(lifeExp ~ log(gdpPercap) + I(continent == "Africa") + I(log(gdpPercap)*(continent == "Africa")),.) %>% summary()
+```
+
+### where the model specification includeds the ‘I(continent == “Africa”)’ term which is the so-called dummy variable for African countries (its value is 1 for African countries and 0 for Asian countries). The last term ’I(log(gdpPercap)*(continent == “Africa”))’ is the cross product of ‘log(gdpPercap)’ and the previous dummy variable. From these estimation results can you tell the coefficient estimates of the two regression lines (the green one and the yellow one) in the first plot?
+
+The first code estimates the red regression line for the combined sample of African and Asian countries. The second code estimates the subsample regression lines separately for Asian and African countries by including interaction terms.
+
+To interpret the output from the second code and find the coefficient estimates of the two regression lines (the green one and the yellow one) in the first plot, let's break down the model specification:
+
+1. `lifeExp ~ log(gdpPercap)` is the base part of the model, which represents the relationship between life expectancy and the logarithm of GDP per capita. The coefficient of this term is the slope of the regression line for the reference group, which is Asian countries in this case.
+
+2. `I(continent == "Africa")` is the dummy variable for African countries. It takes the value of 1 for African countries and 0 for Asian countries. The coefficient of this term represents the difference in intercepts between the two regression lines.
+
+3. `I(log(gdpPercap) * (continent == "Africa"))` is the interaction term between the logarithm of GDP per capita and the dummy variable for African countries. The coefficient of this term represents the difference in slopes between the two regression lines.
+
+From the output of the second code, you will see the estimated coefficients for these three terms:
+
+- (Intercept): This is the intercept of the reference group's (Asian countries) regression line (the yellow line).
+- log(gdpPercap): This is the slope of the reference group's (Asian countries) regression line (the yellow line).
+- I(continent == "Africa"): This is the difference in intercepts between the African countries' regression line (the green line) and the Asian countries' regression line (the yellow line).
+- I(log(gdpPercap) * (continent == "Africa")): This is the difference in slopes between the African countries' regression line (the green line) and the Asian countries' regression line (the yellow line).
+
+To get the coefficients of the two regression lines, you can use the following approach:
+
+For the yellow line (Asian countries):
+- Intercept: The (Intercept) coefficient.
+- Slope: The log(gdpPercap) coefficient.
+
+For the green line (African countries):
+- Intercept: The (Intercept) coefficient + the I(continent == "Africa") coefficient.
+- Slope: The log(gdpPercap) coefficient + the I(log(gdpPercap) * (continent == "Africa")) coefficient.
+
+These coefficient values can be found in the output of the second code under the "Estimate" column in the "Coefficients" section.
+
+### Question 3
+
+### Please estimate the two regression lines (the green one and the yellow one) from the plot you create in Question 1.
+
+we will use two separate linear regression models for each year. Here's the code to estimate the regression lines:
+
+For the green line (Year 1957):
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa", "Asia") & year == 1957) %>% 
+  lm(lifeExp ~ continent + log(gdpPercap), data = .) %>% summary()
+
+```
+
+For the yellow line (Year 2007):
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa", "Asia") & year == 2007) %>% 
+  lm(lifeExp ~ continent + log(gdpPercap), data = .) %>% summary()
+
+```
+
+These codes filter the gapminder dataset for the specific years (1957 and 2007), then fit a linear regression model of life expectancy on continent and the logarithm of GDP per capita. The summary() function is used to display the results.
+
+From the output of these codes, we can find the estimated coefficients for the intercept and the slope of the regression lines for each year. The coefficients can be found in the "Estimate" column in the "Coefficients" section of the output.
+
+For the green line (Year 1957):
+
+Intercept: The (Intercept) coefficient.
+Slope: The log(gdpPercap) coefficient.
+For the yellow line (Year 2007):
+
+Intercept: The (Intercept) coefficient.
+Slope: The log(gdpPercap) coefficient.
+Keep in mind that the continent variable in these models is a factor, and the coefficient for the African continent will represent the difference in intercepts between the Asian and African countries' regression lines.
+
+### Question 4
+
+### In the previous hoomework we have explained why we need to trandform the ‘gdpPercap’ variable using log function. Please rewrite the first chunk of codes without transforming the ‘gdpPercap’ variable to see how awkward the resulting plot is.
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa","Asia") & year %in% c(1957,2007)) %>% 
+  ggplot(aes(y = lifeExp, x = gdpPercap)) +
+  geom_point(aes(col = continent), size = 2) +
+  geom_smooth(aes(col = continent), method = lm, se = F) +
+  geom_smooth(aes(col = "All"), method = lm, se = F) +
+  scale_color_manual(values = c("Africa" = 'limegreen', 
+                                "Asia" = 'gold', 
+                                "All" = 'tomato')) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black",0.85)),
+        panel.grid = element_line(color = alpha("white",0.3),size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black",0.85)))
+
+```
+
+### Question 5
+
+### The following codes include the ‘scale_x_continuous()’ function with the ‘trans = “log”’ option but do not transforming the ‘gdpPercap’ variable. The resulting plot is identical to the one created by the first chunk of codes excep that the labels for the breaks along the x axis change from the ‘log(gdpPercap)’ to ‘gdpPercap’ itself.
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa","Asia") & year %in% c(1957,2007)) %>% 
+  ggplot(aes(y=lifeExp,x=gdpPercap)) +
+  geom_point(aes(col = continent), size = 2) +
+  geom_smooth(aes(col = continent), method = lm, se = F) +
+  geom_smooth(aes(col = "All"), method = lm, se = F) +
+  scale_x_continuous(trans = "log", n.breaks = 7, 
+                     labels = label_number(0.01,big.mark = "")) +
+  scale_color_manual(values = c("Africa" = 'limegreen', 
+                                "Asia" = 'gold', 
+                                "All" = 'tomato')) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black",0.85)),
+        panel.grid = element_line(color = alpha("white",0.3),size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black",0.85)))
+```
+
+### The following codes do the exactly the same thing except the ‘scale_x_continuous()’ function is replaced by the ‘scale_x_log10()’ function.
+
+```{r}
+gapminder %>% 
+  filter(continent %in% c("Africa","Asia") & year %in% c(1957,2007)) %>% 
+  ggplot(aes(y=lifeExp,x=gdpPercap)) +
+  geom_point(aes(col = continent), size = 2) +
+  geom_smooth(aes(col = continent), method = lm, se = F) +
+  geom_smooth(aes(col = "All"), method = lm, se = F) +
+  scale_x_log10(breaks = breaks_log(7), labels = label_number(big.mark = "")) +
+  scale_color_manual(values = c("Africa" = 'limegreen', 
+                                "Asia" = 'gold', 
+                                "All" = 'tomato')) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black",0.85)),
+        panel.grid = element_line(color = alpha("white",0.3),size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black",0.85)))
+```
+
+### Both resulting plots have the log axis with unequal distances among the breask. Please rewrite the codes from Question 1 twice following the steps in the previous two chunks of codes.
+
+Here are the two new sets of codes:
+
+```{r}
+# 1. Using scale_x_continuous() with trans = "log":
+gapminder %>%
+  filter(year %in% c(1957, 2007)) %>%
+  ggplot(aes(y = lifeExp, x = gdpPercap)) +
+  geom_point(aes(col = as.factor(year)), size = 2) +
+  geom_smooth(aes(col = as.factor(year)), method = lm, se = F) +
+  geom_smooth(aes(col = "All"), method = lm, se = F) +
+  scale_x_continuous(trans = "log", n.breaks = 7, 
+                     labels = label_number(0.01, big.mark = "")) +
+  scale_color_manual(values = c("1957" = 'limegreen', 
+                                "2007" = 'gold', 
+                                "All" = 'tomato')) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black", 0.85)),
+        panel.grid = element_line(color = alpha("white", 0.3), size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black", 0.85)))
+
+
+```
+
+```{r}
+# 2. Using scale_x_log10():
+gapminder %>%
+  filter(year %in% c(1957, 2007)) %>%
+  ggplot(aes(y = lifeExp, x = gdpPercap)) +
+  geom_point(aes(col = as.factor(year)), size = 2) +
+  geom_smooth(aes(col = as.factor(year)), method = lm, se = F) +
+  geom_smooth(aes(col = "All"), method = lm, se = F) +
+  scale_x_log10(breaks = breaks_log(7), labels = label_number(big.mark = "")) +
+  scale_color_manual(values = c("1957" = 'limegreen', 
+                                "2007" = 'gold', 
+                                "All" = 'tomato')) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = alpha("black", 0.85)),
+        panel.grid = element_line(color = alpha("white", 0.3), size = 0.1),
+        legend.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.box.background = element_rect(fill = alpha("black", 0.85)))
+
+
+```
+
+Both sets of codes create similar plots with a log-transformed x-axis (gdpPercap) that display the relationship between life expectancy and GDP per capita for the years 1957 and 2007. The regression lines for each year and the combined sample will also be plotted.

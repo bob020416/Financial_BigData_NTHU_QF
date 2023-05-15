@@ -1,0 +1,400 @@
+---
+title: "Homework6_FBDA"
+author: "109090035"
+date: "4/9/2023"
+output: 
+  rmdformats::html_clean:
+    self_contained: true
+    number_sections: true
+    toc: true
+    toc_depth: 2
+    thumbnails: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      comment = "", 
+                      dev.args = list(                                       pointsize = 11))
+library(skimr)
+library(psych)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(Ecdat)
+library(gapminder)
+
+ptable = function(df,digits = getOption("digits"),size = 14){
+  df %>% knitr::kable(digits = digits) %>% 
+    kable_classic(lightable_options = c("striped", "hover", "condensed"),
+                  fixed_thead = list(enabled = T, 
+                                     background = "lavender"),
+                  font_size = size, full_width = F,
+                  html_font = "helvetica")
+}
+```
+
+### Please carefully check the ‘flights’ dataset from the ‘nycflights13’ package
+
+```{r}
+library(nycflights13)
+flights %>% skim() %>% ptable()
+?flights
+```
+
+### 1. You need to examine the meanings of the 4 character variables and their numbers of unique values
+
+```{r}
+flights %>% select(where(is.character)) %>% summarise_all(n_distinct) %>% ptable()
+```
+### 2. the relationship between the ‘time_hour’ (which is the POSIXct type) and the 5 variables ‘year’, ‘month’, ‘day’, ‘hour’, and ‘minute’ using the following command
+
+```{r}
+flights %>% select(year:day,hour,minute,last_col()) %>% head() %>%  ptable() 
+```
+
+### 3.the meanings and the measurement units of the 5 variables whose names ended with ‘time’ as well as the 2 variables whose names ended with ‘delay’
+
+The meanings and units of these variables are:
+
+1. dep_time: Departure time - the time when the aircraft leaves the gate (HHMM, local time).
+
+2. sched_dep_time: Scheduled departure time - the originally scheduled departure time (HHMM, local time).
+
+3. arr_time: Arrival time - the time when the aircraft arrives at the gate (HHMM, local time).
+
+4. sched_arr_time: Scheduled arrival time - the originally scheduled arrival time (HHMM, local time).
+
+5. air_time: Air time - the duration the aircraft spends in the air (minutes).
+
+6. arr_delay: Arrival delay - the difference between the actual arrival time and the scheduled arrival time (minutes, positive values indicate late arrivals, and negative values indicate early arrivals).
+
+7. dep_delay: Departure delay - the difference between the actual departure time and the scheduled departure time (minutes, positive values indicate late departures, and negative values indicate early departures).
+
+### 4.the 6 variables that contain missing values
+
+```{r}
+flights %>% summarise_all(~sum(is.na(.))) %>% ptable()
+```
+This command will show the number of missing values in each variable. The variables with missing values will have a count greater than 0.
+
+
+## Question 1
+
+### Numeric variables can be of either the integer type or the double type. Among the 14 numeric variables 5 of them are of the double type and 9 are of the integer type. The 5 double variables here in fact contain integer values. Can you explain why some of these numeric variables are made the integer type even though their values are all integers? What are the measurement units of these two types of variables?
+
+When designing a dataset, the choice of integer or double type for numeric variables depends on the nature of the data and the desired storage efficiency. While both integer and double types can store numeric values, they have different storage requirements and precision levels.
+
+Integers are used to store whole numbers without any decimal places, and they typically require less storage space compared to double-precision floating-point numbers (doubles). In R, integers are stored in 4 bytes (32 bits), while doubles use 8 bytes (64 bits) of memory. Since integers require less memory, they are more efficient in terms of storage, especially when dealing with large datasets.
+
+Doubles, on the other hand, can store both whole numbers and numbers with decimal places, providing higher precision. In some cases, variables that contain only integer values are still stored as doubles to maintain consistency across different datasets or to accommodate potential changes in the data in the future.
+
+There is no inherent difference in the measurement units between integer and double variables. The measurement units depend on the context and meaning of the variables in the dataset, not the data type. The choice between integer and double types primarily affects storage efficiency and numerical precision.
+
+In the 'flights' dataset, some variables are stored as integers because their values are always whole numbers, and using the integer type reduces storage requirements. For example, year, month, day, and hour variables are stored as integers. The five double variables in the dataset are actually representing integer values, but they might have been stored as doubles to maintain consistency or for future-proofing the dataset.
+
+## Question 2
+
+### Please check the ‘airports’ and ‘airlines’ datasets also from the ‘nycflights13’ package
+
+```{r}
+airports %>%  head() %>% ptable()
+?airports
+airlines %>% ptable()
+?airlines
+```
+
+The first dataset contains two character variables ‘carrier’ (Two letter abbreviation) and ‘name’ (Full name). The second dataset contains 8 variables of which the first two are ‘faa’ (FAA airport code) and ‘name’ (Usual name of the aiport). We need to merge them to the ‘flights’ dataset for some questions.
+
+Now please run the following codes to get several statistics for each carrier (the airline company):
+
+```{r}
+output = flights %>% group_by(carrier) %>% 
+  summarise(
+    n_flights = n(),
+    n_cancel = sum(is.na(dep_time)),
+    cancel_rate = round(100*n_cancel/n_flights,2),
+    across(ends_with("delay"), ~ round(mean(.x,na.rm = T),1))) %>% 
+  inner_join(airlines) %>% 
+  slice_max(cancel_rate, n = 10) 
+
+output %>% ptable()
+```
+
+where the 6 variables creasted by the ‘summarize()’ function are
+
+carrier: the airline company coded by two letter abbreviation
+n_flights: the number of flights by each carrier (16 of them)
+n_cancel: the number of cancelled flights by each carrier (note that the missing values of the original variable ‘dep_time’ represent the cancelled flights)
+cancel_rate: the percentage of cancelled flights
+dep_delay: the average delay time of departure flights by each carrier
+arr_delay: the average delay time of arrival flights by each carrier
+The last variable ‘name’, the full names of airline companies, is created by the ‘inner_join()’ function that pulls in the ‘airlines’ dataset based on the key variable ‘carrier’ (which is the common variable in both the ‘airlines’ and the ‘flight’ datasets). You should learn how to use the ‘inner_join()’ function as well as the ‘left_join()’ function which are frequently used for merging datasets.
+
+The last function ‘slice_max()’ helps to obtain 10 rows corresponding to 10 largest values of the ‘cancel_rate’ variable in descending order from the 16 rows of the original resulting tibble.
+
+### Question 2.1
+
+### Please get the result corresponding to 10 largest values of the ‘dep_delay’ variable.
+
+```{r}
+output_dep_delay = flights %>% group_by(carrier) %>% 
+  summarise(
+    n_flights = n(),
+    n_cancel = sum(is.na(dep_time)),
+    cancel_rate = round(100 * n_cancel / n_flights, 2),
+    across(ends_with("delay"), ~ round(mean(.x, na.rm = T), 1))) %>% 
+  inner_join(airlines) %>% 
+  slice_max(dep_delay, n = 10) 
+
+output_dep_delay %>% ptable()
+
+```
+
+### Question 2.2
+
+### Please use the previous codes as a template to get statistics for different destinations and for different origins, respectively. In both cases you need to change the specification of the ‘inner_join()’ function as follows:
+
+1. For different destinations:
+
+```{r}
+output_dest = flights %>% group_by(dest) %>% 
+  summarise(
+    n_flights = n(),
+    n_cancel = sum(is.na(dep_time)),
+    cancel_rate = round(100 * n_cancel / n_flights, 2),
+    across(ends_with("delay"), ~ round(mean(.x, na.rm = T), 1))) %>% 
+  inner_join(airports %>% select(faa, name), by = c("dest" = "faa")) %>% 
+  slice_max(cancel_rate, n = 10) 
+
+output_dest %>% ptable()
+
+```
+
+2. For different origins:
+
+```{r}
+output_origin = flights %>% group_by(origin) %>% 
+  summarise(
+    n_flights = n(),
+    n_cancel = sum(is.na(dep_time)),
+    cancel_rate = round(100 * n_cancel / n_flights, 2),
+    across(ends_with("delay"), ~ round(mean(.x, na.rm = T), 1))) %>% 
+  inner_join(airports %>% select(faa, name), by = c("origin" = "faa")) %>% 
+  slice_max(cancel_rate, n = 10) 
+
+output_origin %>% ptable()
+
+
+```
+
+## Question 3
+
+### Please run the following codes to get several statistics for 6 different zones based on the ‘distance’ variable:
+
+```{r}
+output = flights %>% 
+  arrange(desc(distance)) %>% 
+  group_by(zone = cut_number(distance, 
+                             n = 6,
+                             labels = paste0("Zone",1:6))) %>% 
+  summarise(
+    dist = first(distance),
+    n_flights = n(),
+    n_cancel = sum(is.na(dep_time)),
+    cancel_rate = round(100*n_cancel/n_flights,2),
+    across(ends_with("delay"), ~ round(mean(.x,na.rm = T),1)),
+    loc = first(dest)) %>% 
+  inner_join(airports %>% select(faa,airport = name),by = c("loc" = "faa")) %>% 
+  select(zone,dist,airport,everything(), -loc) 
+
+output %>%  ptable()
+```
+
+where we first define a new categorical variable ‘zone’ using the ‘cut_number()’ function (you need to be familiar with this function and figure out the meanings of the 6 character values of ‘zone’). The ‘slice_max()’ function (which is equivalent to the ‘arrange(desc())’ function) helps sorting the sample in descending order based on the ‘distance’ variable. The ‘zone’ variable is then used to partition the sample. The 7 variables creasted are
+
+1.dist: the maximum flight distance within each zone (how the ‘fisrt()’ function works here?)
+
+2.n_flights: the number of flights within each zone (16 of them)
+
+3.airport: the farthest airport within each zone
+
+4.n_cancel: the number of cancelled flights within each zone
+
+5.cancel_rate: the percentage of cancelled flights
+
+6.dep_delay: the average delay time of departure flights by each carrier
+
+7.arr_delay: the average delay time of arrival flights by each carrier
+
+8.The last variable ‘name’, the full names of airports, is created by the ‘inner_join()’ function that pulls in the ‘airports’ dataset based on the key variable ‘faa’ and the variable ‘loc’). The ‘name’ variable is then renamed as ‘airport’ and moved to the third column. (You should be able to see some patterns in the last three columns: the longer the flight distance is, the less are the ‘cancel_rate’ and ‘arr_delay’, but not ‘dep_delay’, Can you figure out why?)
+
+**In the output table, you can observe some patterns in the last three columns: as the flight distance increases, both 'cancel_rate' and 'arr_delay' decrease, but 'dep_delay' does not show the same trend. This can be due to several reasons:**
+
+**Longer flights may have more buffer time built into their schedules, which allows them to make up for delays that occur during the flight. As a result, arrival delays tend to decrease as flight distance increases.**
+
+**Cancellation rates might be lower for longer flights because they are often more expensive, and airlines may try to minimize cancellations for these flights to maintain customer satisfaction and protect their revenue.**
+
+**Departure delays do not show a clear trend with flight distance because they can be influenced by various factors, such as airport congestion, aircraft availability, and crew scheduling, which may not be directly related to the flight distance.**
+
+### Question 3.1
+
+### Please use the previous codes as a template to get statistics for 6 different zones based on the ‘air_time’ variable instead of the ‘distance’ variable (in doing so you need to delete the missing values of ‘air_time’ first). Please explain why the resulting ‘n_cancel’ and ‘cancel_rate’ variables contain only zero values.
+
+```{r}
+output_air_time = flights %>% 
+  filter(!is.na(air_time)) %>%
+  arrange(desc(air_time)) %>% 
+  group_by(zone = cut_number(air_time, 
+                             n = 6,
+                             labels = paste0("Zone", 1:6))) %>% 
+  summarise(
+    air_time = first(air_time),
+    n_flights = n(),
+    n_cancel = sum(is.na(dep_time)),
+    cancel_rate = round(100 * n_cancel / n_flights, 2),
+    across(ends_with("delay"), ~ round(mean(.x, na.rm = T), 1)),
+    loc = first(dest)) %>% 
+  inner_join(airports %>% select(faa, airport = name), by = c("loc" = "faa")) %>% 
+  select(zone, air_time, airport, everything(), -loc) 
+
+output_air_time %>%  ptable()
+
+```
+In the resulting table, the 'n_cancel' and 'cancel_rate' variables contain only zero values. This occurs because the code filters out the flights with missing values of 'air_time' before grouping by zones. When a flight is canceled, its departure time ('dep_time') is missing, and so is its 'air_time'. By filtering out flights with missing 'air_time' values, we effectively exclude all canceled flights from the dataset, which results in zero values for 'n_cancel' and 'cancel_rate' in the output.
+
+## Question 4
+
+### The following codes extend the one in question 3 by adding another variable ‘origin’ to the ‘group_by()’ function so that two categorical variables are used jointly to partition the sample to get the subsample statistics: ‘cancel_rate’, ‘arr_delay’, and ‘dep_delay’ (the last two variables are renamed by preceding the original names by a dot).
+
+```{r}
+output1 = flights %>% 
+  group_by(origin,zone = cut_number(distance, 
+                                    n = 6,
+                                    labels = paste0("zone",1:6))) %>% 
+  summarize(
+    cancel_rate = round(100*sum(is.na(dep_time))/n(),2),
+    across(ends_with("delay"), ~ round(mean(.x,na.rm = T),1),
+           .names = ".{.col}"))
+
+output2 = output1 %>% pivot_longer(cols = c(cancel_rate,.dep_delay,.arr_delay)) %>% 
+  arrange(name)
+
+output3 = output2 %>% pivot_wider(names_from = origin)
+
+output1 %>%  ptable()
+
+output3 %>%  ptable()
+
+output2 %>%  ptable()
+
+```
+
+### Question 4.1
+### Please use the previous codes as a template to get the three subsample statistics by replacing the ‘origin’ variable by the ‘month’ variable with two values 2 and 7 only. for this you need to add the following command to the codes:
+
+To analyze the subsample statistics for months 2 and 7, we  can modify the code as follows:
+
+
+```{r}
+
+output1 = flights %>%
+  filter(month %in% c(2, 7)) %>%
+  group_by(month, zone = cut_number(distance,
+                                    n = 6,
+                                    labels = paste0("zone", 1:6))) %>%
+  summarize(
+    cancel_rate = round(100 * sum(is.na(dep_time)) / n(), 2),
+    across(ends_with("delay"), ~round(mean(.x, na.rm = T), 1),
+           .names = ".{.col}")
+  )
+
+output2 = output1 %>% pivot_longer(cols = c(cancel_rate, .dep_delay, .arr_delay)) %>%
+  arrange(name)
+
+output3 = output2 %>% pivot_wider(names_from = month)
+```
+### The reason we are interested in months 2 and 7 only is because these two months, respectively, have the smallest and the larest numbers of flights. (Can you confirm this?)
+
+confirm whether months 2 and 7 have the smallest and largest numbers of flights:
+```{r}
+flights_by_month = flights %>%
+  group_by(month) %>%
+  summarize(n_flights = n()) %>%
+  arrange(n_flights)
+
+flights_by_month
+```
+we can see that February (month 2) has the smallest number of flights, and July (month 7) has the largest number of flights.
+
+### It is interesting to compare the three subsample statistics ‘cancel_rate’, ‘arr_delay’, and ‘dep_delay’ across these two months and across the 6 zones. Please find and explain the patterns in the results after you get them.
+
+analyze the patterns in cancel_rate, arr_delay, and dep_delay across the two months and six zones:
+
+```{r}
+output3 %>% ptable()
+```
+
+From the output3, we can observe the following patterns:
+
+1. Cancel rates are generally higher in February (month 2) than in July (month 7). This could be due to the winter weather conditions in February, which may lead to more flight cancellations.
+
+2. Both arrival and departure delays are generally higher in February compared to July. This could also be attributed to the harsher weather conditions in February, causing delays in flights.
+
+3. Across zones, we can observe that as the distance increases (from zone1 to zone6), cancel rates and delays tend to decrease. This could be due to longer flights having better planning and more buffer time to accommodate potential delays, as well as being less susceptible to short-term weather events at the origin or destination airports.
+
+4. For both months, the cancel rates and delays are highest in the shortest distance zones (zone1, zone2, and zone3) and lowest in the longest distance zones (zone4, zone5, and zone6). This suggests that short-haul flights might be more prone to disruptions, possibly due to the higher frequency of such flights, which could lead to more congestion and related issues at airports.
+
+5. The patterns in cancel_rate, arr_delay, and dep_delay are similar across both months. This indicates that while the magnitude of these metrics may vary between February and July, the general trends remain consistent. It could also suggest that factors influencing flight delays and cancellations, such as airport operations and air traffic control efficiency, may be relatively stable throughout the year, despite seasonal variations in weather conditions and passenger demand.
+
+## Question 5
+
+### Please create a tibble with 101 rows for 101 destinations and 12 columns which contain statistics and additional information for each destination
+
+
+```{r}
+output = flights %>%
+  left_join(planes %>% rename(myear = year), by = "tailnum") %>%
+  filter(!is.na(dest)) %>%
+  group_by(dest, carrier) %>%
+  group_by(dest, carrier, month, day) %>%
+  summarise(
+    n_flights = n(),
+    n_cancel = sum(is.na(dep_time)),
+    cancel_rate = round(100 * n_cancel / n_flights, 2),
+    arr_delay = round(mean(arr_delay, na.rm = TRUE), 1),
+    dep_delay = round(mean(dep_delay, na.rm = TRUE), 1),
+    seats = mean(seats, na.rm = TRUE)
+  ) %>%
+  group_by(dest, carrier) %>%
+  summarise(
+    n_flight = sum(n_flights),
+    max_seats = max(seats, na.rm = TRUE),
+    min_seats = min(seats, na.rm = TRUE),
+    mean_seats = round(mean(seats, na.rm = TRUE), 1),
+    cancel_rate = round(mean(cancel_rate), 2),
+    arr_delay = round(mean(arr_delay, na.rm = TRUE), 1),
+    dep_delay = round(mean(dep_delay, na.rm = TRUE), 1),
+    n_day = n(),
+    max_n_day = max(n_flights)
+  ) %>%
+  group_by(dest) %>%
+  summarise(
+    n_flight = sum(n_flight),
+    n_carrier = n_distinct(carrier),
+    max_seats = max(max_seats, na.rm = TRUE),
+    min_seats = min(min_seats, na.rm = TRUE),
+    mean_seats = round(mean(mean_seats, na.rm = TRUE), 1),
+    cancel_rate = round(mean(cancel_rate), 2),
+    arr_delay = round(mean(arr_delay, na.rm = TRUE), 1),
+    dep_delay = round(mean(dep_delay, na.rm = TRUE), 1),
+    n_day = sum(n_day),
+    max_n_day = max(max_n_day)
+  ) %>%
+  inner_join(airports %>% select(faa, airport = name), by = c("dest" = "faa")) %>%
+  arrange(desc(n_flight))
+
+output %>%  ptable()
+
+```
+

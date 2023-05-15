@@ -1,0 +1,306 @@
+---
+title: "Homework8_FBDA"
+author: "109090035"
+date: "5/2/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      comment = "", 
+                      dev.args = list(                                       pointsize = 11))
+library(FSA)
+library(car)
+library(skimr)
+library(psych)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(Ecdat)
+library(gapminder)
+library(nycflights13)
+
+ptable = function(df,digits = getOption("digits"),size = 14){
+  df %>% knitr::kable(digits = digits) %>% 
+    kable_classic(lightable_options = c("striped", "hover", "condensed"),
+                  fixed_thead = list(enabled = T, 
+                                     background = "lavender"),
+                  font_size = size, full_width = F,
+                  html_font = "helvetica")
+}
+```
+
+### Consider the the following reorganization of the ‘flights’ dataset: for each origin we select 8 carriers with the most flights:
+
+```{r}
+library(nycflights13)
+
+df = flights %>% group_by(origin,carrier) %>%
+  mutate(nn = n()) %>% ungroup() %>%
+  group_by(origin) %>%
+  filter(nn %in% sort(unique(nn), decreasing = T)[1:8]) %>% ungroup()
+```
+
+### The following codes lays down the analytic framework: a KPI (i.e., arr_delay) is defined with which we want to make a selection (picking the best and, possibly, the worst too) among choices (i.e., carrier) for each type (i.e., over the levels of origin):
+
+```{r}
+df %>% 
+  group_by(origin,carrier) %>% 
+  mutate(kpi = mean(arr_delay, na.rm = T)) %>% 
+  group_by(origin) %>% 
+  summarize(
+    best_kpi = min(kpi),
+    best_carrier = paste(unique(carrier %>% subset(kpi == best_kpi)),collapse = ", "), 
+    worst_kpi = max(kpi), 
+    worst_carrier = paste(unique(carrier %>% subset(kpi == worst_kpi)),collapse = ", ")
+  ) %>% ptable()
+```
+
+
+### In the ‘summarize()’ function additional variables may also be defined to present furthr information about kpi. choices, and types.
+
+
+### The following codes define ordered column plots with bar labels in facets to present distribution information about KPI across choices for each type:
+
+```{r}
+library(tidytext)
+df %>%
+  group_by(origin,carrier) %>%
+  summarise(kpi = mean(arr_delay, na.rm = T)) %>%
+  ggplot() +
+  geom_col(aes(reorder_within(carrier,kpi,origin), kpi),
+           col = "gray", fill = "black") +
+  scale_x_reordered() +
+  facet_wrap(~ origin, scales = "free_x") +
+  geom_text(aes(reorder_within(carrier,kpi,origin), kpi,
+                label = round(kpi,0)), 
+            vjust = 1.2, color = "red",
+            position = position_dodge(0.9)) +
+  theme_bw()
+```
+
+### The following codes define a heatmap which provides the same information as that of previous column plots:
+
+```{r}
+df %>% 
+  group_by(origin,carrier) %>%
+  summarise(kpi = mean(arr_delay, na.rm = T)) %>%
+  ggplot(aes(carrier,origin %>% fct_relevel(rev))) + 
+  geom_tile(aes(fill = kpi)) +
+  geom_text(aes(label = round(kpi,2)), col = "lightblue")
+```
+
+
+### Question 1
+### Please modify these codes to do the following:
+
+
+### 1. Select 5 destinations with the most flights
+
+```{r}
+# Step 1: Filter the dataset to select the 5 destinations with the most flights
+top_destinations <- flights %>% 
+  count(dest, sort = TRUE) %>% 
+  top_n(5, wt = n) %>% 
+  pull(dest)
+
+flights_filtered <- flights %>% 
+  filter(dest %in% top_destinations)
+
+top_destinations %>% ptable()
+```
+
+### 2. For each of these destinations, select 5 carriers with the most flights
+
+```{r}
+# Step 2: For each destination, filter the dataset to select the 5 carriers with the most flights
+top_carriers_by_destination <- flights_filtered %>% 
+  group_by(dest) %>% 
+  count(carrier, sort = TRUE) %>% 
+  group_by(dest) %>% 
+  top_n(5, wt = n) %>% 
+  ungroup()
+
+flights_filtered <- flights_filtered %>% 
+  inner_join(top_carriers_by_destination, by = c("dest", "carrier"))
+
+top_carriers_by_destination %>%  ptable()
+```
+
+### Make an ordered column plot of the flight cancellation percentage (based on the missing values of the ‘dep_time’ variable) in each facet corresponding to one of the 5 destinations
+
+```{r}
+# Step 3: Calculate the flight cancellation percentage
+cancellation_summary <- flights_filtered %>% 
+  group_by(dest, carrier) %>% 
+  summarise(cancelled = mean(is.na(dep_time), na.rm = FALSE))
+
+# Step 4: Create an ordered column plot for each destination
+cancellation_summary %>% 
+  ggplot() +
+  geom_col(aes(reorder_within(carrier, cancelled, dest), cancelled),
+           col = "gray", fill = "black") +
+  scale_x_reordered() +
+  facet_wrap(~ dest, scales = "free_x") +
+  geom_text(aes(reorder_within(carrier, cancelled, dest), cancelled,
+                label = scales::percent(cancelled, accuracy = 0.1)),
+            vjust = 1.2, color = "red",
+            position = position_dodge(0.9)) +
+  theme_bw()
+```
+
+### Make an equivalent heatmap
+
+```{r}
+# Step 5: Create an equivalent heatmap
+cancellation_summary %>% 
+  ggplot(aes(carrier, dest %>% fct_relevel(rev))) + 
+  geom_tile(aes(fill = cancelled)) +
+  geom_text(aes(label = scales::percent(cancelled, accuracy = 0.1)), col = "lightblue") +
+  scale_fill_gradient(low = "white", high = "red") +
+  theme_bw()
+
+```
+
+### Question 2
+
+### Please find a dataset which cannot be any of R internal datasets or the datasets we have used in the class or in the homeworks, Then redo the above questions with a meaning framework and a KPI. You can construct multiple KPIs if you like. Please include codes for data cleaning and reorganization. You also need to provide some explanations about why you choose your dataset and what goals you have achieved.
+
+For this example, I have chosen the "Airline On-Time Performance" dataset from the U.S. Bureau of Transportation Statistics, which is not an internal R dataset nor used in your class or homework. 
+
+This dataset provides information on the on-time performance of domestic flights operated by major air carriers. I will use the data for the month of January 2020.
+
+I will analyze this dataset to answer the following questions:
+
+1. Which are the top 5 airports with the most flights?
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+library(readr)
+# Read the dataset
+flights <- read_csv("/Users/user/Downloads/On_Time_Reporting_Carrier_On_Time_Performance_2020_1.csv")
+
+# Data cleaning and reorganization
+# Update the column names in the select() function
+flights <- flights %>% select(Origin, Dest, IATA_CODE_Reporting_Airline, ArrDelay, DepTime, Cancelled)
+
+
+# Rename the IATA_CODE_Reporting_Airline column to Carrier for consistency
+flights <- flights %>% rename(Carrier = IATA_CODE_Reporting_Airline)
+
+
+# If the column names are different, replace them in the following line
+flights <- flights %>% select(Origin, Dest, Carrier, ArrDelay, DepTime, Cancelled)# Step 1: Filter the dataset to select the 5 airports with the most flights
+top_airports <- flights %>% 
+  count(Origin, sort = TRUE) %>% 
+  top_n(5, wt = n) %>% 
+  pull(Origin)
+
+flights_filtered <- flights %>% 
+  filter(Origin %in% top_airports)
+
+top_airports %>% ptable()
+```
+
+2. For each of these airports, which are the top 5 carriers with the most flights?
+
+```{r}
+# Step 2: For each airport, filter the dataset to select the 5 carriers with the most flights
+top_carriers_by_airport <- flights_filtered %>% 
+  group_by(Origin) %>% 
+  count(Carrier, sort = TRUE) %>% 
+  group_by(Origin) %>% 
+  top_n(5, wt = n) %>% 
+  ungroup()
+
+flights_filtered <- flights_filtered %>% 
+  inner_join(top_carriers_by_airport, by = c("Origin", "Carrier"))
+
+top_carriers_by_airport %>% ptable()
+```
+
+3. Calculate the average arrival delay and the percentage of cancelled flights for each carrier at each of the top 5 airports.
+
+```{r}
+# Step 3: Calculate KPIs: average arrival delay and percentage of cancelled flights
+kpi_summary <- flights_filtered %>% 
+  group_by(Origin, Carrier) %>% 
+  summarise(avg_arr_delay = mean(ArrDelay, na.rm = TRUE),
+            cancellation_pct = mean(Cancelled, na.rm = FALSE))
+
+kpi_summary %>% ptable()
+
+```
+
+4. Visualize this information using an ordered column plot and a heatmap.
+
+```{r}
+library(tidytext)
+# Step 4: Create an ordered column plot for each KPI at each airport
+kpi_summary %>% 
+  gather(key = "KPI", value = "value", -Origin, -Carrier) %>%
+  ggplot() +
+  geom_col(aes(reorder_within(Carrier, value, Origin), value, fill = KPI),
+           col = "gray") +
+  scale_x_reordered() +
+  facet_wrap(~ Origin, scales = "free_x") +
+  geom_text(aes(reorder_within(Carrier, value, Origin), value,
+                label = ifelse(KPI == "cancellation_pct",
+                               scales::percent(value, accuracy = 0.1),
+                               round(value, 1))),
+            vjust = 1.2, color = "black",
+            position = position_dodge(0.9)) +
+  scale_fill_manual(values = c("avg_arr_delay" = "darkorange", "cancellation_pct" = "dodgerblue")) +
+  theme_bw()
+
+```
+
+### 5. Create an equivalent heatmap
+
+```{r}
+library(tidyverse)
+
+# Gather the data and save as a separate object
+gathered_data <- kpi_summary %>%
+  pivot_longer(cols = c(avg_arr_delay, cancellation_pct), names_to = "KPI", values_to = "value")
+
+# Calculate the median
+median_value <- median(gathered_data$value, na.rm = TRUE)
+
+# Plot the heatmap
+gathered_data %>%
+  ggplot(aes(Carrier, Origin %>% fct_relevel(rev), fill = value)) + 
+  geom_tile() +
+  geom_text(aes(label = ifelse(KPI == "cancellation_pct",
+                                scales::percent(value, accuracy = 0.1),
+                                round(value, 1))),
+            col = "black") +
+  facet_wrap(~ KPI, ncol = 1) +
+  scale_fill_gradient2(low = "white", mid = "yellow", high = "red", midpoint = median_value) +
+  theme_bw()
+
+```
+
+The dataset chosen for this analysis contains information on flight delays and cancellations for various airlines operating from different airports. The primary reason for selecting this dataset is that it allows us to evaluate and compare the performance of airlines at different airports based on key performance indicators (KPIs) such as average arrival delay and cancellation percentage.
+
+Through this analysis, we aimed to achieve the following goals:
+
+1. **Identify patterns and trends in flight delays and cancellations:** Analyzing the dataset helps us understand how different airlines perform at various airports, identifying any specific patterns or trends in their performance. This can provide valuable insights for both airlines and passengers. For example, airlines can use this information to improve their operations and reduce delays or cancellations, while passengers can make more informed decisions when choosing an airline for their travel plans.
+
+2. **Compare the performance of airlines at different airports:** The analysis enables us to compare the performance of various airlines at different airports, which can reveal any differences in their operational efficiency. This information can be useful for airlines to identify areas where they may need to improve their services and for passengers to choose the best airline for their specific travel needs.
+
+Based on the results obtained from the analysis:
+
+- In general, airlines have varied average arrival delays and cancellation percentages at different airports. For instance, at ATL airport, Delta Airlines (DL) has a negative average arrival delay, indicating that their flights usually arrive earlier than scheduled. In contrast, American Airlines (AA) has a positive average arrival delay, meaning their flights tend to arrive later than scheduled.
+
+- Some airports seem to have more cancellations than others. For example, at ORD airport, all airlines have a relatively higher cancellation percentage compared to other airports. This could indicate that there might be external factors such as weather conditions or airport-specific issues contributing to the higher cancellation rates.
+
+- There is no single airline that consistently performs the best or worst across all airports. The performance of each airline varies depending on the airport, suggesting that local factors play a significant role in shaping their operational efficiency.
+
+In conclusion, this analysis has helped us better understand the performance of different airlines at various airports and identify areas where they may need to improve their operations. It also provides valuable insights for passengers who are looking for reliable and punctual airline services.
+
+

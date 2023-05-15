@@ -1,0 +1,173 @@
+---
+title: "Homework2_FBDA"
+author: "109090035_陳佑祥"
+date: "2/25/2023"
+output: html_document
+---
+## Read data as dataframe
+
+```{r}
+library(skimr)
+# Read CSV into a DataFrame named ' market '  and transform the "" empty data as NA 
+market = read.csv('/Users/user/Downloads/marketing_data.csv' ,na.strings = c(""," ",NA))
+head(market)
+```
+
+## 第一題 
+
+```{r}
+str(market)
+skim(market)
+```
+## 第二題 
+
+```{r}
+ls(market)
+```
+## 第三題 
+
+```{r}
+sum(is.na(market))
+```
+We can see there are 24 missing vlaue in the dataset .
+## 第四題 
+
+```{r}
+sapply(market, function(x) sum(is.na(x)))
+```
+We can see there are 24 missing vlaue in the column "Income" . 
+## 第四題（Hint方法）
+```{r}
+colSums(is.na(market))
+#double check with skim()
+skim(market)
+```
+## 第五題 
+
+```{r}
+library(psych)
+describe(market)
+summary(market)
+```
+The summary function in r, simply just print out the type of the character and state the number of length  that the column value type is character have. 
+On the other side, describe function giving out more detail information during handling character value such as "variation  " ," number of character ", "mean", " sd ", " median" , " trimmed   " ," mad "  ,"min " ,
+" max " , "range" ,  "skew" ,  "kurtosis  " and "  se " .
+
+## 第六題 
+
+```{r}
+library(magrittr) 
+library(dplyr) 
+market %$%
+  table(Education)
+print("This is the table of the existing frquency number of degree in the market data")
+market %$%
+  table(Marital_Status)
+print("This is the table of the existing frequency number of marriage status in the market data")
+market %$%
+  table(Country)
+
+print("This is the table of the existing frequency number of country status in the market data")
+
+market %$%
+  table(Education,Marital_Status)
+print("This is the frequency table with two column in the market dataframe with the existing frequency number of degree and marriage status in the market data")
+
+```
+## 第七題 
+
+```{r}
+library(stringr)
+head(market$Income)
+#convert string to numeric vlaue 
+sub("," , "" ,str_sub(market$Income,2)) %>%
+  as.numeric() %>%
+    head()
+```
+The income data is string instead of numeric value is due to the input format of the data with the "$" it make the vale a character, since it turns out it input as a character we can see that the format is not numeric.
+But we can change it through as.numeric function . 
+
+## 第八題 
+
+```{r}
+Nunique = apply(market,2,n_unique)
+print(Nunique)
+print('n_unique() counts the number of unique combinations in a set of one or more vectors in market data ')
+col = colnames(market)[Nunique == 2]
+print(col)
+print('col print out the column with a n_unique() count equals to 2 ')
+tbl = apply(market[,col],2,table)
+print(tbl)
+print('tbl print out the above variable "col" using the table function and make them as a frequency table. ')
+ratio = apply(market[,col],2,mean)
+print(ratio)
+print('tbl print out the above variable "col" using the mean function and calculate their mean as a ratio ')
+```
+## 第九題 
+
+```{r}
+myf = function(var,byvar)
+{
+  by = unique(byvar)
+  mout = NULL
+  for (i in by) {
+    s = subset(var,byvar == i)
+    m = colMeans(s)
+    mout = cbind(mout,m)
+  }
+  colnames(mout) = by
+  mout
+}
+
+varlist = c("MntWines","MntSweetProducts",
+            "MntMeatProducts","MntFishProducts",
+            "MntGoldProds")
+colspec = c(4,2,1,5,8)
+
+tbl = myf(subset(market,,varlist),market$Education)
+
+tbl
+barplot(tbl, beside = T, col = colspec)
+legend("topright", inset = c(0,0), legend = varlist, 
+       col = colspec, pch = 16, cex = 1.1)
+```
+
+```{r}
+agegrp = ifelse(market$Year_Birth < 1960,"<1960",
+                ifelse(market$Year_Birth < 1970,"[1960,1970)",
+                       ifelse(market$Year_Birth < 1980,"[1970,1980)",">=1980")))
+
+table(agegrp)
+```
+agegrp is a condition statement, if the Year_birth data in market lower than 1960, then assign it as character "<1960", if the Year_birth data in market higher than 1960 and lower than 1970,then assign it as character "[1960,1970)", if the Year_birth data in market higher than 1970 and lower than 1980,then assign it as character "[1970,1980)", finally if the Year_birth data in market higher than 1980, then assign it as character ">=1980".
+
+```{r}
+#Redefining myf()
+myf = function(var,agegrp)
+{
+  by = unique(agegrp)
+  mout = NULL
+  for (i in by) {
+    s = subset(var,agegrp == i)
+    m = colMeans(s)
+    mout = cbind(mout,m)
+  }
+  colnames(mout) = by
+  mout
+}
+
+varlist = c("Kidhome","Teenhome")
+colspec = c(4,2,1,5,8)
+
+tbl = myf(subset(market,,varlist),market$Education)
+
+tbl
+barplot(tbl, beside = T, col = c(4,2))
+legend("topright", inset = c(0,0), legend = varlist, 
+       col = c(4,2), pch = 16, cex = 1.1)
+```
+The bar plot showing the degree of graduation that Kidhome and Teenhome frequency table information, we can see that In the basic degree,Kidhome has outperform Teenhome, and in the master,2n Cycle and graduation degree,Kidhome and Teenhome frequency table mean information are similar, In the PhD degree, Teenhome has outperform Kidhome in frequency table mean.
+ 
+
+
+

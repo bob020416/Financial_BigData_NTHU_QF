@@ -1,0 +1,309 @@
+---
+title: "Homework4_FBDA"
+author: "109090035"
+date: "3/21/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      comment = "", 
+                      dev.args = list(bg = 'lavender',                                       pointsize = 11))
+library(skimr)
+library(psych)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(Ecdat)
+library(gapminder)
+
+ptable = function(df,digits = getOption("digits"),size = 14){
+  df %>% knitr::kable(digits = digits) %>% 
+    kable_classic(lightable_options = c("striped", "hover", "condensed"),
+                  fixed_thead = list(enabled = T, 
+                                     background = "lavender"),
+                  font_size = size, full_width = F,
+                  html_font = "helvetica")
+}
+```
+
+### 1. Please define two new variables ‘Oclass’ and ‘Chwy’ using the ‘mutate()’ and ‘tranmute()’ functions as follows:
+
+### The new variable ‘Oclass’ is defined to be the same as the categorical variable ‘class’ but with levels reordered in the decreasing order of the averages of the ‘hwy’ variable using the ’ reorfer()’ function
+
+### The new variable ‘Chwy’ is defined to be a categorical variable of 3 levels with labels ‘low’, ‘mid’ and ‘high’ using the ‘cut()’ function
+
+### Print ‘mpg1’ and ‘mpg2’ to see their difference.
+
+
+```{r}
+# Create mpg1 with mutate()
+mpg1 <- mpg %>%
+  mutate(
+    Oclass = reorder(class, hwy, FUN = mean, order = -1),
+    Chwy = cut(hwy, breaks = c(-Inf, 20, 30, Inf), labels = c("low", "mid", "high"))
+  ) %>%
+  count(Oclass, Chwy)
+
+# Create mpg2 with transmute()
+mpg2 <- mpg %>%
+  transmute(
+    Oclass = reorder(class, hwy, FUN = mean, order = -1),
+    Chwy = cut(hwy, breaks = c(-Inf, 20, 30, Inf), labels = c("low", "mid", "high"))
+  ) %>%
+  count(Oclass, Chwy)
+
+# Print mpg1 and mpg2
+mpg1 %>% ptable()
+mpg2 %>% ptable()
+
+```
+
+The main difference between 'mutate()' and 'transmute()' is that 'mutate()' will keep all the original columns in the data frame, while 'transmute()' will only keep the newly created columns. Therefore, when you print 'mpg1' and 'mpg2', you will notice that 'mpg1' has all the original columns in addition to the new 'Oclass' and 'Chwy' columns, while 'mpg2' only has 'Oclass' and 'Chwy' columns.
+
+The difference between 'mutate()' and 'transmute()' is not clearly shown because we are using 'count()' immediately after creating the new columns. Since 'count()' only keeps the columns specified for counting, it masks the difference between 'mutate()' and 'transmute()'.
+
+
+### 2. Given the results of the previous question please apply the ‘count()’ function from the ‘dplyr’ package to the two new variables ‘Oclass’ and ‘Chwy’ using %>% operator and then apply the base function ‘table()’ function using %$% operator. Compare the two results to see the difference. Which one do you think is easier to understand? Also explain why you need to use two different operators %>% and %$%?
+
+```{r}
+# Create mpg1 with mutate()
+mpg1 <- mpg %>%
+  mutate(
+    Oclass = reorder(class, hwy, FUN = mean, order = -1),
+    Chwy = cut(hwy, breaks = c(-Inf, 20, 30, Inf), labels = c("low", "mid", "high"))
+  )
+
+# Apply count() function
+count_result <- mpg1 %>%
+  count(Oclass, Chwy)
+
+# Print count_result
+count_result %>% ptable()
+
+# Apply table() function
+table_result <- mpg1 %$%
+  table(Oclass, Chwy) %>% ptable()
+
+# Print table_result
+table_result
+```
+
+The difference between the two results is in how the data is presented. The output of the count() function in count_result shows the data in a long format, where each combination of 'Oclass' and 'Chwy' is listed along with the corresponding count. On the other hand, the output of the table() function in table_result shows the data in a wide format, with 'Oclass' levels as rows and 'Chwy' levels as columns, with the count for each combination displayed in the corresponding cell.
+
+It's a matter of personal preference, but I find the wide format (table_result) easier to understand, as it provides a more compact and organized view of the counts for each combination of 'Oclass' and 'Chwy'.
+
+The reason for using two different operators, %>% and %$%, is that they serve different purposes in the pipeline:
+
+%>% (pipe operator) is used to pass the output of one function as the first argument to the next function in the pipeline. This allows for more readable and modular code.
+
+%$% (exposition pipe operator) is used to expose the variables within a data frame so that they can be used directly as input to a function that does not accept a data frame as its first argument (like the table() function in this case). This operator essentially extracts the variables from the data frame and allows you to use them as standalone objects in the next function.
+
+
+### 3. Install the package ‘Ecdat’ which contains many datasets. Please list the names of these datasets and their brief descriptions in a two-column table. We are going to use the ‘Housing’ dataset.
+
+```{r}
+# Get the dataset names and descriptions
+ecdat_datasets <- data(package = "Ecdat")$results[, c("Item", "Title")]
+
+# Convert the dataset names and descriptions to a data frame
+ecdat_dataframe <- as.data.frame(ecdat_datasets)
+
+# Set the column names
+colnames(ecdat_dataframe) <- c("Dataset Name", "Description")
+
+# Print the data frame
+head(ecdat_dataframe) %>% ptable()
+
+```
+
+### 4. Please examine the following definition of the character vector ‘dd’ to understand its structure.
+```{r}
+dd = c('red','yellow','white','skyblue')
+names(dd) = as.character(1:4)
+```
+dd = c('red', 'yellow', 'white', 'skyblue'): This line creates a character vector dd with four elements: 'red', 'yellow', 'white', and 'skyblue'.
+
+names(dd) = as.character(1:4): This line assigns names to the elements of the dd vector. The as.character(1:4) part creates a character vector with elements '1', '2', '3', and '4'. Then, the names(dd) function assigns these characters as names to the corresponding elements of the dd vector.
+
+### 5. Please study the ‘recode()’ function and then apply it to the variable ‘stories’ of the ‘Housing’ dataset with the vector ‘dd’ defined before as an option (be careful about the three bangs in front of the vector name):
+
+### please explain how the variable ‘stories’ is changed after the cammond is executed.
+
+The recode() function is used to replace values in a vector with new values specified by a set of rules. In this case, we want to apply it to the stories variable of the Housing dataset using the dd vector as the set of rules.
+
+```{r}
+Housing <- Housing %>%
+  mutate(stories = recode(stories, !!!dd))
+head(Housing) %>%  ptable()
+```
+
+
+The recode() function will replace the values in the stories variable based on the rules defined in the dd vector. Since dd is defined as:
+
+The recode() function will replace the value '1' in the stories variable with 'red', the value '2' with 'yellow', the value '3' with 'white', and the value '4' with 'skyblue'. If there are any values in the stories variable that are not covered by the dd vector, they will remain unchanged.
+
+The three exclamation marks (bangs) !!! are used to splice the named vector dd so that the names and the values are used directly as arguments inside the recode() function.
+
+
+### 6. Finally, please carefully study the following program and execute it to see a resulting graph with 3 scatter plots showing the relationships between ‘price’ and ‘lotsize’ of hosuing, as well as how that relationship is affected by the two variables ‘stories’ (in different colors) and ‘bedrooms’ (in different plots or the so-called facets). Briefly explain how ‘lotsize’ affects ‘price’ and how the variables ‘stories’ and ‘bedrooms’ affact this ‘price/lotsize’ relationship.
+
+
+```{r}
+par(mfrow = c(2,2),mar=c(4.5,4.5,1.2,2),
+    # mar=c(3,4.5,1.2,2),
+    bg = "black", fg = "white", 
+    col.lab = "white", col.main = "white", col.axis = "white")
+Housing %>% filter(bedrooms == 2) %$% 
+  plot(y = price,x = lotsize, xlab ="", 
+       pch = 16, 
+       main = "bedrooms = 2",
+       col = as.vector(recode(stories,!!!dd)))
+Housing %>% filter(bedrooms == 3) %$% 
+  plot(y = price,x = lotsize, pch = 16, ylab ="",
+       xlab ="",
+       main = "bedrooms = 3",
+       col = as.vector(recode(stories,!!!dd)))
+Housing %>% filter(bedrooms == 4| stories == 4) %$% 
+  plot(y = price,x = lotsize, pch = 16, 
+       main = "bedrooms = 4",
+       col = as.vector(recode(stories,!!!dd)))
+par(bg = "black", fg = "black", 
+    col.lab = "black", col.main = "black", col.axis = "black")
+Housing %>% filter(bedrooms == 1) %$% 
+  plot(y = price,x = lotsize, col = "black")
+par(bg = "black", fg = "white", 
+    col.lab = "white", col.main = "white", col.axis = "white")
+legend("left", inset = c(0.05,0.1),
+       pch = 16, ncol = 1, 
+       col = dd, y.intersp = 0.8,
+       title = "Stories",
+       legend = names(dd))
+```
+
+
+
+The given program creates a 2x2 grid of plots showing the relationship between 'price' and 'lotsize' for houses with different numbers of 'bedrooms' and 'stories'. The plots are colored according to the number of 'stories' using the colors defined in the dd vector. Here's a brief explanation of how 'lotsize' affects 'price' and how the variables 'stories' and 'bedrooms' affect this 'price/lotsize' relationship:
+
+
+Lotsize and Price: From the scatter plots, it appears that there is a positive relationship between 'lotsize' and 'price'. As 'lotsize' increases, the 'price' of the houses also tends to increase. This makes sense, as larger lots generally command higher prices in the real estate market.
+
+Stories: The plots show that houses with more stories tend to have higher prices, especially for the same lot size. This is evident from the different colors of the points in each plot, where points representing houses with more stories (e.g., skyblue points for 4-story houses) generally appear higher on the price axis. This is consistent with the idea that multi-story houses often have more living space and can be more expensive than single-story houses on the same lot size.
+
+Bedrooms: The program creates separate plots for houses with different numbers of bedrooms (1 to 4). The relationship between 'price' and 'lotsize' seems to be stronger for houses with more bedrooms. For example, the scatter plot for houses with 4 bedrooms shows a more evident positive relationship between 'lotsize' and 'price' than the plots for houses with fewer bedrooms. This suggests that the number of bedrooms may affect the 'price/lotsize' relationship, with larger houses (i.e., those with more bedrooms) generally having higher prices for the same lot size.
+
+In summary, the 'price/lotsize' relationship in the housing market is positively correlated, and this relationship is affected by the number of 'stories' and 'bedrooms'. Houses with more stories and bedrooms tend to have higher prices for the same lot size.
+
+### 7. You really need to figure out what the three ‘par()’ functions do and what the fourth ‘plot()’ function does (it is a channel helps to bring in the legend!).
+
+The first par() function sets the global plotting parameters for the upcoming plots. It configures the layout of the plots, as well as the appearance of the plot elements, such as colors and margins. The parameters used are:
+
+mfrow = c(2, 2): This sets the layout of the plots to a 2x2 grid.
+mar = c(4.5, 4.5, 1.2, 2): This sets the margins around the plots (bottom, left, top, right) in lines of text.
+bg = "black": This sets the background color of the plots to black.
+fg = "white": This sets the foreground color (e.g., axes, labels) to white.
+col.lab = "white": This sets the color of axis labels to white.
+col.main = "white": This sets the color of the main titles to white.
+col.axis = "white": This sets the color of the axis lines and tick marks to white.
+
+The second par() function sets the background and foreground colors to black before creating the fourth plot():
+bg = "black": Sets the background color to black.
+fg = "black": Sets the foreground color to black.
+col.lab = "black": Sets the color of axis labels to black.
+col.main = "black": Sets the color of the main titles to black.
+col.axis = "black": Sets the color of the axis lines and tick marks to black.
+
+The fourth plot() function creates an "empty" plot with a black background and black foreground. The purpose of this plot is to reserve space in the 2x2 grid for the legend that will be added later. This plot has only one data point, which is not visible because it has the same color as the background.
+
+The third par() function resets the plotting parameters to their original values (white foreground, black background, and white axis labels, titles, and tick marks) before adding the legend:
+
+bg = "black": Sets the background color to black.
+fg = "white": Sets the foreground color to white.
+col.lab = "white": Sets the color of axis labels to white.
+col.main = "white": Sets the color of the main titles to white.
+col.axis = "white": Sets the color of the axis lines and tick marks to white.
+
+Finally, the legend() function is called to add a legend to the fourth plot in the 2x2 grid. The legend displays the colors and labels for the 'stories' variable as defined in the dd vector.
+
+In summary, the three par() functions are used to set up the plotting parameters for the grid layout, colors, and margins, while the fourth plot() function creates an empty plot that serves as a placeholder for the legend.
+
+### 8. Please install the ‘gapminder’ package which contains the ‘gapminder’ dataset which we will use now. Please modify the previous program to draw a graph that helps us examine the relationship between the two variables ‘lifeExp’ (y) and ‘gdpPercap’ (x) as well as the effects of the two variables ‘continent’ (in different colors) and ‘year’ (in different facets). There are many years of data but you only consider the three years: 1952, 1977 and 2002.
+
+
+redefine the 'dd' vector and filter the 'gapminder' dataset for the years 1952, 1977, and 2002:
+```{r}
+dd <- c('red', 'gray', 'yellow', 'cyan', 'white')
+names(dd) <- c('Africa', 'Americas', 'Asia', 'Europe', 'Oceania')
+
+selected_years <- gapminder %>% filter(year %in% c(1952, 1977, 2002))
+```
+
+modify the previous program to draw a graph that shows the relationship between 'lifeExp' and 'gdpPercap', with 'continent' in different colors and 'year' in different facets:
+
+```{r}
+par(mfrow = c(1, 3), mar = c(4.5, 4.5, 1.2, 2),
+    bg = "black", fg = "white", 
+    col.lab = "white", col.main = "white", col.axis = "white")
+
+for (yr in c(1952, 1977, 2002)) {
+  selected_years %>% 
+    filter(year == yr) %$% 
+    plot(y = lifeExp, x = gdpPercap, xlim = c(0, 50000), ylim = c(35, 85),
+         xlab = "GDP per Capita", ylab = "Life Expectancy",
+         pch = 16, main = paste0("Year = ", yr),
+         col = as.vector(recode(continent, !!!dd)))
+}
+
+par(bg = "black", fg = "white", 
+    col.lab = "white", col.main = "white", col.axis = "white")
+
+legend("right", inset = c(0.05, 0.1),
+       pch = 16, ncol = 1, 
+       col = dd, y.intersp = 0.8,
+       title = "Continent",
+       legend = names(dd))
+
+```
+
+
+
+
+The resulting graph displays three scatter plots showing the relationship between 'lifeExp' and 'gdpPercap' for the years 1952, 1977, and 2002. The points are colored according to the 'continent' variable using the colors specified in the 'dd' vector.
+
+From the graph, we can observe the following:
+
+1.There is a positive relationship between 'gdpPercap' and 'lifeExp', indicating that countries with higher GDP per capita tend to have higher life expectancies.
+
+2.The 'continent' variable affects this relationship, with different continents showing different patterns. For example, African countries (red points) generally have lower life expectancies for the same GDP per capita compared to countries from other continents.
+
+3.Over time (from 1952 to 2002), the life expectancy has increased for most countries, and the relationship between 'gdpPercap' and 'lifeExp' has become stronger.
+
+
+### 9. Please explain why ‘lifeExp’ should be the y variable and ‘gdpPercap’ should be x variable. Which continent has the most significant improvement in life over the 4 decades?
+
+In this analysis, 'lifeExp' is chosen as the y variable and 'gdpPercap' as the x variable because we are interested in understanding how life expectancy (a measure of human development) is related to GDP per capita (an economic indicator). By convention, the independent or explanatory variable (GDP per capita in this case) is plotted on the x-axis, and the dependent or response variable (life expectancy) is plotted on the y-axis. 
+
+This choice of axes allows us to visually explore the relationship between the two variables and observe how changes in GDP per capita might be associated with changes in life expectancy.
+
+To determine which continent has the most significant improvement in life expectancy over the 4 decades, we can visually examine the scatter plots we created earlier or analyze the data more directly. Here's a way to calculate the improvement in life expectancy for each continent:
+```{r}
+lifeExp_improvement <- selected_years %>%
+  group_by(continent, year) %>%
+  summarize(mean_lifeExp = mean(lifeExp)) %>%
+  spread(year, mean_lifeExp) %>%
+  mutate(improvement = `2002` - `1952`) %>%
+  arrange(desc(improvement))
+
+lifeExp_improvement %>%  ptable()
+
+```
+Based on the calculated improvements in life expectancy, the continent with the most significant improvement over the 4 decades is Asia. 
+
+
+This can also be observed in the scatter plots, where the Asian countries (yellow points) generally show a more significant increase in life expectancy over time compared to other continents.
+
+Note: It is crucial to practice subsample analysis based on categorical variables using various datasets and visualizations, such as bar plots or scatter plots. The template provided here can be easily adapted to other datasets to explore different relationships and improve your understanding of data analysis techniques.
+
+
+### Note: This kind of subsample analysis based on categorical variables using either bar plots or scatter plots is very important in any data analysis. You are urged to try other datasets using the template provided here to make yourself familiar with this kind of work.
